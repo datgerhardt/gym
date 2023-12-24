@@ -4,10 +4,10 @@ import "io"
 
 type Machine struct {
 	code string
-	ip   int
+	ip   int // instruction pointer
 
 	memory [30000]int
-	dp     int
+	dp     int // data pointer
 
 	input  io.Reader
 	output io.Writer
@@ -25,15 +25,20 @@ func NewMachine(code string, in io.Reader, out io.Writer) *Machine {
 }
 
 func (m *Machine) Execute() {
-	// println(m.code)
 	for m.ip < len(m.code) {
 		ins := m.code[m.ip]
 
 		switch ins {
 		case '+':
 			m.memory[m.dp]++
+			if m.memory[m.dp] == 256 {
+				m.memory[m.dp] = 0
+			}
 		case '-':
 			m.memory[m.dp]--
+			if m.memory[m.dp] == -1 {
+				m.memory[m.dp] = 255
+			}
 		case '>':
 			m.dp++
 		case '<':
@@ -56,10 +61,10 @@ func (m *Machine) Execute() {
 				}
 			}
 		case ']':
-			if m.memory[m.dp] == 0 {
+			if m.memory[m.dp] != 0 {
 				depth := 1
 				for depth != 0 {
-					m.ip++
+					m.ip--
 					switch m.code[m.ip] {
 					case ']':
 						depth++
@@ -86,16 +91,9 @@ func (m *Machine) readChar() {
 	m.memory[m.dp] = int(m.buf[0])
 }
 
-// TODO: Fix the memory issue in putChar to char
-
 func (m *Machine) putChar() {
 	m.buf[0] = byte(m.memory[m.dp])
-	print("Memory", m.memory[1])
 	n, err := m.output.Write(m.buf)
-
-	// char := rune(m.memory[m.dp])
-	// n, err := m.output.Write([]byte(string(char)))
-
 	if err != nil {
 		panic(err)
 	}
