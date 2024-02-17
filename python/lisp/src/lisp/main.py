@@ -28,7 +28,17 @@ def parse(program: str) -> Exp:
     return read_from_tokens(tokenize(program))
                            
 def read_from_tokens(tokens: list) -> Exp:
+    """ Convert Tokens into Exp 
+    
+    >>> tokens = ['(', 'begin', '(', 'define', 'r', '10', ')', '(', '*', 'pi', '(', '*', 'r', 'r', ')', ')', ')']
+    >>> read_from_tokens(tokens)
+    ['begin', ['define', 'r', 10], ['*', 'pi', ['*', 'r', 'r']]]
 
+    >>> read_from_tokens([')'])
+    Traceback (most recent call last):
+        ...
+    SyntaxError: unexpected EOF
+    """
     if len(tokens) == 0:
         raise SyntaxError('unexpected EOF')
     token = tokens.pop(0)
@@ -51,7 +61,7 @@ def atom(token: str) -> Atom:
             return Symbol(token)    
 
 
-def standard_env() ->Env:
+def standard_env() -> Env:
     "An environment with some Scheme standard procedures."
     env = Env()
     env.update(vars(math)) # sin, cos, sqrt, pi, ...
@@ -105,8 +115,36 @@ def eval(x:Exp, env=global_env) -> Exp:
         return proc(*args)
         
 
-pp = "λ"
+def repl(prompt="λ> "):
+    while True:
+        val = eval(parse(input(prompt)))
+        if val is not None:
+            print(schemestr(val))
+
+            
+def schemestr(exp):
+    if isinstance(exp, List):
+        return '(' + " ".join(map(schemestr(exp))) + ')'
+    else:
+        return str(exp)
+
+class Env(dict):
+    "An environment: a dict of {'var': val} pairs, with an outer Env."
+    def __init__(self, parms=(), args=(), outer=None):
+        self.update(zip(parms, args))
+        self.outer = outer
+    def find(self, var):
+        return self if (var in self) else self.outer.find(var) 
+
+class Procedure(object):
+    "A user-defined Scheme procedure."
+    def __init__(self, parms, body, env):
+        self.parms, self.body, self.env = parms, body, env
+    def __call__(self, *args):
+        return eval(self.body, Env(self.parms, argss, self.env))
+
 
 if __name__ == "__main__":
     import doctest
-    # doctest.testmod()
+    doctest.testmod()
+
