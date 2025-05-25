@@ -2,3 +2,4 @@
 python/grpc
 
 *venv/
+*__pycache__/
