@@ -1,0 +1,6 @@
+fastapi 
+graphene 
+graphene-sqlalchemy 
+pydantic 
+sqlalchemy
+

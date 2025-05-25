@@ -1,0 +1,21 @@
+root = [] 
+
+
+def insert_left(root, child_val):
+    subtree = root.pop(1)
+    if len(subtree) > 1:
+        root.insert(1, [child_val, subtree, []])
+    else:
+        root.insert(1, [child_val, [], []])
+    return root
+
+def insert_right(root, child_val):
+    subtree = root.pop(2)
+    if len(subtree) > 1:
+        root.insert(2, [child_val, [], subtree])
+    else:
+        root.insert(1, [child_val, [], []])
+    return root
+
+
+
