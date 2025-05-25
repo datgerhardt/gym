@@ -94,26 +94,6 @@ def standard_env() -> Env:
     })
     return env
 
-global_env = standard_env()
-
-def eval(x:Exp, env=global_env) -> Exp:
-    "Evaluate an expression in an environment."
-    if isinstance(x, Symbol):
-        return env[x]
-    elif isinstance(x, Number):
-        return x
-    elif x[0] == 'if':
-        (_, test, conseq, alt) = x
-        exp = (conseq if eval(test, env) else alt)
-        return eval(exp, env)
-    elif x[0] == 'define':
-        (_, symbol, exp) = x
-        env[symbol] = eval(exp,env)
-    else:
-        proc = eval(x[0], env)
-        args = [eval(arg, env) for arg in x[1:]]
-        return proc(*args)
-        
 
 def repl(prompt="λ> "):
     while True:
@@ -141,9 +121,37 @@ class Procedure(object):
     def __init__(self, parms, body, env):
         self.parms, self.body, self.env = parms, body, env
     def __call__(self, *args):
-        return eval(self.body, Env(self.parms, argss, self.env))
+        return eval(self.body, Env(self.parms, args, self.env))
 
+global_env = standard_env()
 
+def eval(x, env=global_env) -> Exp:
+    "Evaluate an expression in an environment."
+    if isinstance(x, Symbol):
+        return env.find(x)[x]
+    elif not isinstance(x, List):
+        return x
+    op, *args = x
+    if op == 'quote':
+        return args[0]
+    elif op == 'if':
+        (_, test, conseq, alt) = x
+        exp = (conseq if eval(test, env) else alt)
+        return eval(exp, env)
+    elif op == 'define':
+        (_, symbol, exp) = x
+        env[symbol] = eval(exp,env)
+    elif op == 'set!':
+        (symbol, exp) = args
+        env.find(symbol)[symbol] = eval(exp, env)
+    elif op == 'lambda':
+        (parms, body) = args
+        return Procedure(parms, body, env)
+    else:
+        proc = eval(op, env)
+        args = [eval(arg, env) for arg in args]
+        return proc(*args)
+        
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
