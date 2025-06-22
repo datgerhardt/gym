@@ -2,8 +2,9 @@ import argparse
 from bz2 import compress
 import configparser
 from datetime import datetime
-from nt import mkdir, write
-from ntpath import isdir
+
+# from nt import mkdir, write
+# from ntpath import isdir
 import grp, pwd
 
 from fnmatch import fnmatch
@@ -12,7 +13,6 @@ from math import ceil
 import os
 import re
 import sys
-from typing import override
 from unittest import result
 import zlib
 
@@ -25,22 +25,39 @@ argsubparsers.required = True
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
     match args.command:
-        case "add" : cmd_add(args)
-        case "cat-file" : cmd_cat_file(args)
-        case "check-ignore" : cmd_check_ignore(args)
-        case "checkout" : cmd_checkout(args)
-        case "commit" : cmd_commit(args)
-        case "hash-object" : cmd_hash_object(args)
-        case "init" : cmd_init(args)
-        case "log" : cmd_log(args)
-        case "ls-files" : cmd_ls_files(args)
-        case "ls-tree" : cmd_ls_tree(args)
-        case "rev-parse" : cmd_rev_parse(args)
-        case "rm" : cmd_rm(args)
-        case "show-ref" : cmd_show_ref(args)
-        case "status" : cmd_status(args)
-        case "tag" : cmd_tag(args)
-        case _  : print("Bad command.")
+        case "add":
+            cmd_add(args)
+        case "cat-file":
+            cmd_cat_file(args)
+        case "check-ignore":
+            cmd_check_ignore(args)
+        case "checkout":
+            cmd_checkout(args)
+        case "commit":
+            cmd_commit(args)
+        case "hash-object":
+            cmd_hash_object(args)
+        case "init":
+            cmd_init(args)
+        case "log":
+            cmd_log(args)
+        case "ls-files":
+            cmd_ls_files(args)
+        case "ls-tree":
+            cmd_ls_tree(args)
+        case "rev-parse":
+            cmd_rev_parse(args)
+        case "rm":
+            cmd_rm(args)
+        case "show-ref":
+            cmd_show_ref(args)
+        case "status":
+            cmd_status(args)
+        case "tag":
+            cmd_tag(args)
+        case _:
+            print("Bad command.")
+
 
 class GitRespository(object):
     """A git repository"""
@@ -64,8 +81,8 @@ class GitRespository(object):
             self.conf.read([cf])
         elif not force:
             raise Exception("Configuration file is missing")
-        
-        if not force: 
+
+        if not force:
             vers = int(self.conf.get("core", "repositoryformatversion"))
             if vers != 0:
                 raise Exception(f"Unsupported repositoryformatversion: {vers}")
@@ -75,6 +92,7 @@ def repo_path(repo, *path):
     """Compute path under repo's gitdir"""
     return os.path.join(repo.gitdir, *path)
 
+
 def repo_file(repo, *path, mkdir=False):
     """Same as repo_path, but create dirname(*path) if absent. For
     example, repo_file(r, \"refs\", \"remotes\", \"origin\", \"HEAD\") will create
@@ -83,22 +101,24 @@ def repo_file(repo, *path, mkdir=False):
     if repo_dir(repo, *path[:-1], mkdir=False):
         return repo_path(repo, *path)
 
+
 def repo_dir(repo, *path, mkdir=False):
     """Same as repo_path, but mkdir *path if absent if mkdir."""
-    
+
     path = repo_path(repo, *path)
 
     if os.path.exists(path):
-        if (os.path.isdir(path)):
+        if os.path.isdir(path):
             return path
         else:
             raise Exception(f"Not a directory {path}")
 
     if mkdir:
-        os.mkdirs(path)
+        os.makedirs(path)
         return path
     else:
         return None
+
 
 def repo_create(path):
     """Create a new repository at path"""
@@ -120,10 +140,12 @@ def repo_create(path):
     assert repo_dir(repo, "objects", mkdir=True)
     assert repo_dir(repo, "refs", "tags", mkdir=True)
     assert repo_dir(repo, "refs", "heads", mkdir=True)
-    
+
     # .git/description
     with open(repo_file(repo, "description"), "w") as f:
-        f.write("Unnamed repository; edit this file 'description' to name the repository.\n")
+        f.write(
+            "Unnamed repository; edit this file 'description' to name the repository.\n"
+        )
 
     # .git/HEAD
     with open(repo_file(repo, "HEAD"), "w") as f:
@@ -132,7 +154,7 @@ def repo_create(path):
     with open(repo_file(repo, "config"), "w") as f:
         config = repo_default_config()
         config.write()
-    
+
     return repo
 
 
@@ -146,28 +168,32 @@ def repo_default_config():
 
     return ret
 
+
 argsp = argsubparsers.add_parser("init", help="Initialize a new, empty repository.")
 argsp.add_argument(
     "path",
     metavar="directory",
     nargs="?",
     default=".",
-    help="Where to create the repository.")
+    help="Where to create the repository.",
+)
+
 
 def cmd_init(args):
     repo_create(args.path)
+
 
 def repo_find(path=".", required=True):
     path = os.path.realpath(path)
 
     if os.path.isdir(os.path.join(path, ".git")):
         return GitRespository(path)
-    
+
     # If we haven't returned recurse in parent. if w
     parent = os.path.realpath(os.path.joim(path, ".."))
 
-    if parent == path: 
-        # Bottom cass 
+    if parent == path:
+        # Bottom cass
         # os.path.join("/", "..") == "/":
         # if parent==path, then  path is root.
         if required:
@@ -178,6 +204,7 @@ def repo_find(path=".", required=True):
     # Recursive case
     return repo_find(parent, required)
 
+
 class GitObject(object):
 
     def __init__(self, data=None) -> None:
@@ -185,7 +212,7 @@ class GitObject(object):
             self.deserialize(data)
         else:
             self.init()
-    
+
     def serialize(self, repo):
         """This function MUST be implemented by subclasses.
 
@@ -198,11 +225,11 @@ class GitObject(object):
 
     def deserialize(self, data):
         raise Exception("Unimplemented")
-    
+
     def init(self):
         pass
 
-        
+
 def object_read(repo, sha):
     """Read object sha from Git repository repo.  Return a
     GitObject whose exact type depends on the object."""
@@ -210,55 +237,60 @@ def object_read(repo, sha):
     path = repo_file(repo, "objects", sha[0:2], sha[2:])
 
     if not os.path.isfile(path):
-        return  None
+        return None
 
     with open(path, "rb") as f:
         raw = zlib.decompress(f.read())
 
-        # Read object type 
-        x = raw.find(b' ')
+        # Read object type
+        x = raw.find(b" ")
         fmt = raw[0:x]
 
-        # Read and validate object size 
-        y = raw.find(b'\x00', x)
+        # Read and validate object size
+        y = raw.find(b"\x00", x)
         size = int(raw[x:y].decode("ascii"))
-        if size != len(raw)-y-1:
+        if size != len(raw) - y - 1:
             raise Exception(f"Malformed object {sha}: bad length")
 
         # pick constructor
         match fmt:
-            case b'commit' : c=GitCommit
-            case b'tree' : c=GitTree
-            case b'tag' : c=GitTag
-            case b'blob' : c=GitBlob
+            case b"commit":
+                c = GitCommit
+            case b"tree":
+                c = GitTree
+            case b"tag":
+                c = GitTag
+            case b"blob":
+                c = GitBlob
             case _:
                 raise Exception(f"Unknown type {fmt.decode('ascii')} for object {sha}")
 
     # call constructor and return object
-    return c(raw[y+1:])
+    return c(raw[y + 1 :])
 
 
 def object_write(obj, repo=None):
     # Serialize object data
     data = obj.serialize()
     # Add header
-    result = obj.fmt + b' ' + str(len(data)).encode() +  b'\x00' + data
-    # Compute jhash 
+    result = obj.fmt + b" " + str(len(data)).encode() + b"\x00" + data
+    # Compute jhash
     sha = hashlib.sha1(result).hexdigest()
 
     if repo:
         # Compute path
-        path=repo_path(repo, 'objects', sha[0:2], sha[2:], mkdir=True)
+        path = repo_path(repo, "objects", sha[0:2], sha[2:], mkdir=True)
 
         if not os.path.exists(path):
-            with open(path, 'wb') as f:
+            with open(path, "wb") as f:
                 # compress and write
-                f.write(zlib,compress(result))
+                f.write(zlib, compress(result))
 
     return sha
 
+
 class GitBlob(GitObject):
-    fmt=b'blob'
+    fmt = b"blob"
 
     def serialize(self):
         return self.blobdata
@@ -269,38 +301,60 @@ class GitBlob(GitObject):
 
 # wyag cat-file TYPE OBJECT
 
-argsp = argsubparsers.add_parser( "cat-file", 
-                                    help="Provide content of repository objects.")
-argsp.add_argument("type", metavar=["blob", "commit", "tag", "tree"], help="Specify the type")
+argsp = argsubparsers.add_parser(
+    "cat-file", help="Provide content of repository objects."
+)
+argsp.add_argument(
+    "type", metavar=["blob", "commit", "tag", "tree"], help="Specify the type"
+)
 argsp.add_argument("object", metavar="object", help="The object to display")
+
 
 def cmd_cat_file(args):
     repo = repo_find()
     cat_file(repo, args.object, fmt=args.type.encode())
 
+
 def cat_file(repo, obj, fmt=None):
     obj = object_read(repo, object_find(repo, obj, fmt=fmt))
     sys.stdout.buffer.write(obj.serialize())
-    
+
+
 def object_find(repo, name, fmt=None, fellow=True):
     return name
 
 
 # wyag hash-object [-w] [-t TYPE] FILE
-argsp = argsubparsers.add_parser("hash-object", help="Computr object ID and optionally create a blob from a file")
-argsp.add_argument("-t", metavar="type",dest="type", choices=['blob', 'commit','tag','tree'], default="blob",help="Specify the type")
-argsp.add_argument("-w", dest="write", action="store_true", help="Actually write the object into the database")
+argsp = argsubparsers.add_parser(
+    "hash-object", help="Compute object ID and optionally create a blob from a file"
+)
+argsp.add_argument(
+    "-t",
+    metavar="type",
+    dest="type",
+    choices=["blob", "commit", "tag", "tree"],
+    default="blob",
+    help="Specify the type",
+)
+argsp.add_argument(
+    "-w",
+    dest="write",
+    action="store_true",
+    help="Actually write the object into the database",
+)
 argsp.add_argument("path", help="Read object from <file>")
+
 
 def cmd_hash_object(args):
     if args.write:
         repo = repo_find()
     else:
         repo = None
-    
+
     with open(args.path, "rb") as fd:
         sha = object_hash(fd, args.type.encode(), repo)
         print(sha)
+
 
 def object_hash(fd, fmt, repo=None):
     """Hash object, writing it to repo if provided."""
@@ -308,18 +362,23 @@ def object_hash(fd, fmt, repo=None):
 
     # choose constructor according to fmt argument
     match fmt:
-        case b'commmit' : obj=GitCommit(data)
-        case b'tree' : obj=GitTree(data)
-        case b'tag' : obj=GitTag(data)
-        case b'blob' : obj=GitBlob(data)
-        case _: Exception(f"Unknown type {fmt}!")
-    
+        case b"commmit":
+            obj = GitCommit(data)
+        case b"tree":
+            obj = GitTree(data)
+        case b"tag":
+            obj = GitTag(data)
+        case b"blob":
+            obj = GitBlob(data)
+        case _:
+            Exception(f"Unknown type {fmt}!")
+
     return object_write(obj, repo)
 
 
 def kvlm_parse(raw, start=0, dct=None):
     if not dct:
-        dct= dct()
+        dct = dct()
         # You CANNOT declare the argument as dct=dict() or all call to
         # the functions will endlessly grow the same dict.
 
@@ -328,8 +387,8 @@ def kvlm_parse(raw, start=0, dct=None):
     # where we are: at a keyword, or already in the messageQ
 
     # We search for the next space and the next newline.
-    spc = raw.find(b' ', start)
-    nl = raw.find(b'\n', start)
+    spc = raw.find(b" ", start)
+    nl = raw.find(b"\n", start)
 
     # If space appears before newline, we have a keyword.  Otherwise,
     # it's the final message, which we just read to the end of the file.
@@ -342,7 +401,7 @@ def kvlm_parse(raw, start=0, dct=None):
     # the dictionary, with None as the key, and return.
     if (spc < 0) or (nl < spc):
         assert nl == start
-        dct[None] = raw[start+1:]
+        dct[None] = raw[start + 1 :]
         return dct
 
     # Recursive case
@@ -354,12 +413,13 @@ def kvlm_parse(raw, start=0, dct=None):
     # space, so we loop until we find a "\n" not followed by a space.
     end = start
     while True:
-        end = raw.find(b'\n', end+1)
-        if raw[end+1] != ord(' '): break
+        end = raw.find(b"\n", end + 1)
+        if raw[end + 1] != ord(" "):
+            break
 
     # Grab the value
     # Also, drop the leading space on continuation lines
-    value = raw[spc+1:end].replace(b'\n', b'\n')
+    value = raw[spc + 1 : end].replace(b"\n", b"\n")
 
     # Don't overwrite existing data contents
     if key in dct:
@@ -368,38 +428,87 @@ def kvlm_parse(raw, start=0, dct=None):
         else:
             dct[key] = [dck[key], value]
     else:
-        dct[key]=value
+        dct[key] = value
 
-    return kvlm_parse(raw, start=end+1, dct=dct)
+    return kvlm_parse(raw, start=end + 1, dct=dct)
+
 
 def kvlm_serialize(kvlm):
-    ret = b''
-    
+    ret = b""
+
     # Output fields
     for k in kvlm.key():
         # skip the message itself
-        if k == None: continue
+        if k == None:
+            continue
         val = kvlm[k]
 
-        #Normalize to a list
+        # Normalize to a list
         if type(val) != list:
             val = [val]
 
         for v in val:
-            ret += k + b' ' + (v.replace(b'\n', b'\n ')) + b'\n'
+            ret += k + b" " + (v.replace(b"\n", b"\n ")) + b"\n"
     # Append message
-    ret += b'\n' + kvlm[None] 
+    ret += b"\n" + kvlm[None]
 
-    return ret 
+    return ret
+
 
 class GitCommit(GitObject):
-    fmt = b'commit'
+    fmt = b"commit"
 
     def deserialize(self, data):
         self.kvlm = kvlm_parse(data)
 
     def serialize(self, repo):
         return kvlm_serialize(self.kvlm)
-    
+
     def init(self):
         self.kvlm = dict()
+
+# wyag log  
+
+argsp = argsubparsers.add_parser("log", help="Display history of the a given commit.")
+argsp.add_argument("commit", default="HEAD", nargs="?", help="commit to start at.")
+
+
+def cmd_log(args):
+    repo = repo_find()
+
+    print("digraph wyaglog{")
+    print("  node[shape=rect]")
+    log_graphviz(repo, object_find(repo, args.commit), set())
+    print("}")
+
+
+def log_graphviz(repo, sha, seen):
+
+    if sha in seen:
+        return
+    seen.add(sha)
+
+    commit = object_read(repo, sha)
+    message = commit.kvlm[Node].decode("utf8").strip()
+    message = message.replace("\\", "\\\\")
+    message = message.replace('"', '\\"')
+
+    if "\n" in message:  # keep only the first line
+        message = message[: message.index("\n")]
+
+    print(f'  c_{sha} [label="{sha[0:7]}: {message}"]')
+    assert commit.fmt == b"commit"
+
+    if not b"parent" in commit.kvlm.keys():
+        # Base case: the initial commit
+        return
+
+    parents = commit.kvlm[b"parent"]
+
+    if type(parents) != list:
+        parents = [parents]
+
+    for p in parents:
+        p = p.decode("ascii")
+        print(f"  c_{sha} -> c_{p};")
+        log_graphviz(repo, p, seen)
