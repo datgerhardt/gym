@@ -1,0 +1,28 @@
+[project]
+name = "async-fstapi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.16.4",
+    "asyncpg>=0.30.0",
+    "fastapi>=0.116.1",
+    "httpx>=0.28.1",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "uvicorn>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.0",
+    "psycopg>=3.2.9",
+    "pytest-postgresql>=7.0.2",
+    "ruff>=0.12.4",
+    "ty>=0.0.1a15",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", "app"
+]
